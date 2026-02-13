@@ -1,64 +1,46 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+const SECRET = process.env.SECRET || "TLV_SECRET_KEY_2026";
+
+// --- CORS ---
+app.use(cors({
+  origin: [
+    "https://tlv-detailing.vercel.app",
+    "http://localhost:5173"
+  ],
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
 
-/* ---------- ВОТ ЭТО ГЛАВНОЕ (CORS РАЗРЕШЕНИЕ) ---------- */
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-/* -------------------------------------------------------- */
-
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const ADMIN_IDS = process.env.ADMIN_IDS.split(",");
-const SECRET = process.env.SECRET;
-
+// тест
 app.get("/", (req, res) => {
-  res.send("TLV Backend OK");
+  res.send("TLV backend alive");
 });
 
-app.post("/api/lead", async (req, res) => {
-  try {
-    const auth = req.headers.authorization || "";
-    if (auth !== `Bearer ${SECRET}`) {
-      return res.status(401).json({ ok: false, error: "unauthorized" });
-    }
-
-    const { name, phone, choice, note } = req.body;
-
-    const text = `
-🔥 НОВАЯ ЗАЯВКА TLV
-
-👤 Имя: ${name}
-📞 Телефон: ${phone}
-📦 Пакет: ${choice}
-📝 Комментарий: ${note || "—"}
-`;
-
-    for (const id of ADMIN_IDS) {
-      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: id,
-          text,
-        }),
-      });
-    }
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ ok: false, error: "server_error" });
+// заявка
+app.post("/api/lead", (req, res) => {
+  const auth = req.headers.authorization || "";
+  if (auth !== `Bearer ${SECRET}`) {
+    return res.status(401).json({ ok:false, error:"unauthorized" });
   }
+
+  const { name, phone, choice, note } = req.body;
+
+  console.log("=== NEW LEAD ===");
+  console.log("Name:", name);
+  console.log("Phone:", phone);
+  console.log("Package:", choice);
+  console.log("Note:", note);
+  console.log("================");
+
+  res.json({ ok:true });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log("Server started on", PORT));
+app.listen(PORT, () => {
+  console.log("Backend running on port", PORT);
+});
